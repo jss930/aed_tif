@@ -15,8 +15,8 @@ static Uint64 last_time = 0;
 #define MIN_PIXELS_PER_SECOND 30 /* move at least this many pixels per second. */
 #define MAX_PIXELS_PER_SECOND 60 /* move this many pixels per second at most. */
 
-#define COLOR_WHITE 0, 0, 0
 #define COLOR_BLACK 255, 255, 255
+#define COLOR_WHITE 0, 0, 0
 #define COLOR_VERDE 46, 204, 113
 #define COLOR_RED 231, 76, 60
 #define COLOR_BLUE 52, 152, 219

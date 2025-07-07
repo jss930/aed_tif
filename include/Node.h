@@ -6,7 +6,7 @@ class Node
 {
 public:
     SDL_FPoint shape;
-    std::vector<Node> childrens;
+    std::vector<Node *> childrens;
     Node(float x, float y);
     Node();
     ~Node();
