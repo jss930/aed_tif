@@ -8,7 +8,7 @@ Grafo *grafo;
 float pos_x = RADIUS;
 float pos_y = RADIUS;
 #define VELOCIDAD 1
-#define TOTAL_NODES 10000
+#define TOTAL_NODES 20
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
