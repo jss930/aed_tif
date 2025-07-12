@@ -32,10 +32,13 @@ DEPS = $(OBJ:.o=.d)
 # Regla principal
 all: $(TARGET)
 
+# @echo "ejecutando"
+# TARGET)
 # Crear ejecutable
 $(TARGET): $(OBJ)
 	$(CC) $(OBJ) $(SDL_FLAGS) -o $@
 
+# @if [ -f ./$(TARGET) ]; then mv ./$(TARGET) ./$(BUILD_DIR)/estable_$(NAME); fi
 # Compilar cada archivo fuente a objeto, creando dependencias
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%$(EXTENSION)
 	@mkdir -p $(BUILD_DIR)

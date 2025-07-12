@@ -24,7 +24,7 @@ static Uint64 last_time = 0;
 #define COLOR_GREY 96, 125, 139
 
 #define RADIUS 20
-#define GAP 5
+#define GAP 10
 #define PADDING 10
 // static SDL_FPoint nodes[NUM_POINTS];
 // static float point_speeds[NUM_POINTS];

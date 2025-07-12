@@ -7,8 +7,8 @@ class Grafo
 private:
     Node *start;
     Node *tarjet;
-    Node *map;
-    Node *mapy;
+    Node *map;  // nodos ordenados en base X
+    Node *mapy; // nodos ordenados en base Y
     int num_nodes;
 
 public:

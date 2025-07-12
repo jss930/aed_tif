@@ -1,6 +1,6 @@
 // #include "general.h"
 #include "grafo.h"
-#include <algorithm> // std::sort
+#include <algorithm>
 #include <time.h>
 #include <random>
 
@@ -165,34 +165,6 @@ Grafo::~Grafo()
     }
 } */
 
-int find(float val, Node *mapy, int tam)
-{
-    int left = 0;
-    int right = tam - 1;
-    int best = -1;
-    float best_diff = std::numeric_limits<float>::max();
-
-    while (left <= right)
-    {
-        int mid = (left + right) / 2;
-        float key = mapy[mid].shape.x + mapy[mid].shape.y;
-        float diff = std::abs(key - val);
-
-        if (diff < best_diff)
-        {
-            best_diff = diff;
-            best = mid;
-        }
-
-        if (key < val)
-            left = mid + 1;
-        else
-            right = mid - 1;
-    }
-
-    return best;
-}
-
 bool esta(int val, std::vector<int> lista)
 {
     for (int i : lista)
@@ -205,14 +177,14 @@ bool esta(int val, std::vector<int> lista)
 
 void Grafo::create_children()
 {
-    const int VENTANA = 15;
-
+    // const int VENTANA = 3;
+    const int VENTANA = 15 + (num_nodes / 10) % 50;
+    const int NUM_CONEXIONES = 3;
     for (int i = 0; i < num_nodes; i++)
     {
         std::vector<std::pair<float, int>> distancias;
         std::vector<int> insertados;
-
-        // Buscar en vecindad de i
+        // ! eliminar función STL
         for (int j = std::max(0, i - VENTANA); j <= std::min(num_nodes - 1, i + VENTANA); j++)
         {
             if (i == j)
@@ -220,40 +192,74 @@ void Grafo::create_children()
 
             float dx = map[i].shape.x - map[j].shape.x;
             float dy = map[i].shape.y - map[j].shape.y;
-            float dist_squared = SDL_powf(dx, 2) + SDL_powf(dy, 2);
+            float dist_squared = dx * dx + dy * dy;
 
             distancias.emplace_back(dist_squared, j);
             insertados.push_back(j);
         }
 
-        // Buscar en vecindad desde mapy (ordenado por y)
-        int new_i = find(map[i].shape.y, mapy, num_nodes);
-        if (new_i != -1)
+        int pos_en_mapy = -1;
+        for (int k = 0; k < num_nodes; k++)
         {
-            for (int j = std::max(0, new_i - VENTANA); j <= std::min(num_nodes - 1, new_i + VENTANA); j++)
+            if (mapy[k].shape.x == map[i].shape.x && mapy[k].shape.y == map[i].shape.y)
             {
-                if (i == j || esta(j, insertados))
-                    continue;
-
-                float dx = map[i].shape.x - mapy[j].shape.x;
-                float dy = map[i].shape.y - mapy[j].shape.y;
-                float dist_squared = SDL_powf(dx, 2) + SDL_powf(dy, 2);
-
-                distancias.emplace_back(dist_squared, j);
-                insertados.push_back(j);
+                pos_en_mapy = k;
+                break;
             }
         }
 
-        // Ordenar por distancia
+        if (pos_en_mapy != -1)
+        {
+            // ! eliminar función STL
+            for (int j = std::max(0, pos_en_mapy - VENTANA); j <= std::min(num_nodes - 1, pos_en_mapy + VENTANA); j++)
+            {
+                int idx_en_map = -1;
+                for (int k = 0; k < num_nodes; k++)
+                {
+                    if (map[k].shape.x == mapy[j].shape.x && map[k].shape.y == mapy[j].shape.y)
+                    {
+                        idx_en_map = k;
+                        break;
+                    }
+                }
+
+                if (idx_en_map == -1 || idx_en_map == i || esta(idx_en_map, insertados))
+                    continue;
+
+                float dx = map[i].shape.x - map[idx_en_map].shape.x;
+                float dy = map[i].shape.y - map[idx_en_map].shape.y;
+                float dist_squared = dx * dx + dy * dy;
+
+                distancias.emplace_back(dist_squared, idx_en_map);
+                insertados.push_back(idx_en_map);
+            }
+        }
+        // ! eliminar función STL
         std::sort(distancias.begin(), distancias.end());
 
-        // Agregar los 3 vecinos más cercanos
-        for (int k = 0; k < 3 && k < distancias.size(); k++)
+        for (int k = 0; k < NUM_CONEXIONES && k < distancias.size(); k++)
         {
             int idx = distancias[k].second;
 
-            map[i].childrens.push_back(&map[idx]);
-            map[idx].childrens.push_back(&map[i]);
+            bool ya_conectado = false;
+            for (auto *child : map[i].childrens)
+            {
+                if (child == &map[idx])
+                {
+                    ya_conectado = true;
+                    break;
+                }
+            }
+
+            if (!ya_conectado)
+            {
+                map[i].childrens.push_back(&map[idx]);
+                map[idx].childrens.push_back(&map[i]);
+            }
+        }
+        if (map[i].childrens.size() < NUM_CONEXIONES)
+        {
+            i--;
         }
     }
 }
@@ -298,10 +304,9 @@ void Grafo::render(SDL_Renderer *renderer, float &pos_x, float &pos_y)
     float radius_from = SDL_pow(RADIUS, 2);
     for (int i = 0; i < num_nodes; i++)
     {
+
         if (frustum(map[i], cam, pos_x, pos_y))
         {
-            count_nodes_renderer++;
-            //*  renderizamos el circulo
             for (int j = 0; j < map[i].childrens.size(); j++)
             {
                 renderAristas(renderer, &map[i], map[i].childrens[j], pos_x, pos_y);
@@ -309,7 +314,8 @@ void Grafo::render(SDL_Renderer *renderer, float &pos_x, float &pos_y)
                 {
                     } */
             }
-
+            count_nodes_renderer++;
+            //*  renderizamos el circulo*/
             SDL_SetRenderDrawColor(renderer, COLOR_GREY, SDL_ALPHA_OPAQUE);
 
             for (float x = map[i].shape.x - RADIUS; x < map[i].shape.x + RADIUS; x++)
