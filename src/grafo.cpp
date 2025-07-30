@@ -27,15 +27,15 @@ Grafo::Grafo(const int number_nodes)
     // max_y *= 1;
 
     srand(time(0));
-    SDL_srand(time(0));
+    
     this->map = new Node[number_nodes];
     this->mapy = new Node[number_nodes];
     for (int i = 0; i < number_nodes; i++)
     {
         // map[i] = Node(SDL_randf() * max_x, SDL_randf() * max_y);
 
-        map[i].shape.x = SDL_randf() * (max_x - RADIUS) + RADIUS;
-        map[i].shape.y = SDL_randf() * (max_y - RADIUS) + RADIUS;
+        map[i].shape.x = (float(rand()) / RAND_MAX) * (max_x - RADIUS) + RADIUS;
+        map[i].shape.y = (float(rand()) / RAND_MAX) * (max_y - RADIUS) + RADIUS;
 
         if (coalition_count > 10)
 
