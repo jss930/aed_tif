@@ -6,6 +6,7 @@
 
 int general_nodes_count = 0;
 
+// creates num_nodes nodes in a random position, avoiding coalitions
 Grafo::Grafo(const int number_nodes)
 {
     int coalition_count = 0;
@@ -72,6 +73,7 @@ Grafo::Grafo(const int number_nodes)
     printf("coalitions : %d\n", coalition_count);
 }
 
+// orders the nodes in a list based on the X or Y coordinate by consecutive mergesort
 Node *Grafo::order_nodes(Node *lista, int tam, char type)
 {
     // int *merge(int *lista, int tam)
@@ -129,6 +131,8 @@ Grafo::~Grafo()
 {
     if (map)
         delete[] map;
+    if (mapy)
+        delete[] mapy;
 }
 
 /* void Grafo::create_children()
@@ -174,7 +178,7 @@ bool esta(int val, std::vector<int> lista)
     }
     return false;
 }
-
+// creates children for each node based on nearby nodes (limited to NUM_CONEXIONES))
 void Grafo::create_children()
 {
     // const int VENTANA = 3;
@@ -264,6 +268,7 @@ void Grafo::create_children()
     }
 }
 
+// checks if the target node is in a coalition with other nodes
 bool Grafo::circuleCoalition(Node &tarjet, Node *list, int idx, float gap)
 {
     float radius_from = SDL_pow(RADIUS * 2 + gap, 2);
@@ -279,6 +284,7 @@ bool Grafo::circuleCoalition(Node &tarjet, Node *list, int idx, float gap)
     return false;
 }
 
+// checks if the node is in the frustum of the camera
 bool Grafo::frustum(Node &node, SDL_FRect &cam, float px, float py)
 {
 
@@ -291,6 +297,7 @@ bool Grafo::frustum(Node &node, SDL_FRect &cam, float px, float py)
     //! Add process to aplicate frustum culling technique
 }
 
+// renders the nodes and their connections
 void Grafo::render(SDL_Renderer *renderer, float &pos_x, float &pos_y)
 {
     int count_nodes_renderer = 0;
@@ -342,6 +349,7 @@ void Grafo::render(SDL_Renderer *renderer, float &pos_x, float &pos_y)
     SDL_RenderFillRect(renderer, &rect); */
 }
 
+// renders the edges of the graph from a specific index
 void Grafo::renderAristas(SDL_Renderer *renderer, int idx, int pos_x, int pos_y)
 {
     for (int i = 0; i < map[idx].childrens.size(); i++)
