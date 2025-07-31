@@ -1,4 +1,3 @@
-// interface/ADT/prime_function.h
 #ifndef __PRIME_FUNCTION__
 #define __PRIME_FUNCTION__
 
