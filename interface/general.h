@@ -11,7 +11,7 @@ static Uint64 last_time = 0;
 #define WINDOW_WIDTH 640 * 1.7
 #define WINDOW_HEIGHT 480 * 1.7
 
-#define NUM_POINTS 100
+#define NUM_POINTS 100 // 
 #define MIN_PIXELS_PER_SECOND 30 /* move at least this many pixels per second. */
 #define MAX_PIXELS_PER_SECOND 60 /* move this many pixels per second at most. */
 

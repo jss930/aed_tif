@@ -1,13 +1,10 @@
-
 # Nombre del ejecutable
 NAME = grafos
 
 # Compilador y flags
-#! compilador a usar
 CC = g++
-
 CXX = g++
-CFLAGS = -Iinclude -MMD -DSDL_MAIN_USE_CALLBACKS# Puedes agregar -Wall -Wextra para más advertencias
+CFLAGS = -I$(INTERFACE_DIR) -MMD -DSDL_MAIN_USE_CALLBACKS# Puedes agregar -Wall -Wextra para más advertencias
 
 # Flags de pkg-config para SDL3
 SDL_FLAGS = $(shell pkg-config --cflags --libs sdl3)
@@ -19,30 +16,27 @@ ifeq ($(CC),$(CXX))
 endif
 
 # Directorios
-SRC_DIR = src
+IMPLEMENTATION_DIR = implementation
 BUILD_DIR = build
-INCLUDE_DIR = include
+INTERFACE_DIR = interface
 TARGET = $(BUILD_DIR)/$(NAME)
 
 # Archivos fuente, objetos y dependencias
-SRC = $(wildcard $(SRC_DIR)/*$(EXTENSION))
-OBJ = $(patsubst $(SRC_DIR)/%$(EXTENSION), $(BUILD_DIR)/%.o, $(SRC))
+IMPLEMENTATION = $(wildcard $(IMPLEMENTATION_DIR)/*$(EXTENSION))
+OBJ = $(patsubst $(IMPLEMENTATION_DIR)/%$(EXTENSION), $(BUILD_DIR)/%.o, $(IMPLEMENTATION))
 DEPS = $(OBJ:.o=.d)
 
 # Regla principal
 all: $(TARGET)
 
-# @echo "ejecutando"
-# TARGET)
 # Crear ejecutable
 $(TARGET): $(OBJ)
 	$(CC) $(OBJ) $(SDL_FLAGS) -o $@
 
-# @if [ -f ./$(TARGET) ]; then mv ./$(TARGET) ./$(BUILD_DIR)/estable_$(NAME); fi
 # Compilar cada archivo fuente a objeto, creando dependencias
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%$(EXTENSION)
+$(BUILD_DIR)/%.o: $(IMPLEMENTATION_DIR)/%$(EXTENSION)
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) $(SDL_FLAGS) -c $< -o $@ 
+	$(CC) $(CFLAGS) $(SDL_FLAGS) -c $< -o $@
 
 # Incluir dependencias si existen
 -include $(DEPS)
@@ -51,4 +45,8 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%$(EXTENSION)
 clean:
 	rm -rf $(BUILD_DIR)/*
 
-.PHONY: all clean
+# Limpiar todo incluyendo dependencias
+distclean: clean
+	rm -f $(BUILD_DIR)/*.d
+
+.PHONY: all clean distclean
