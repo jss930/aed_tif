@@ -8,6 +8,7 @@ CC = g++
 
 CXX = g++
 CFLAGS = -Iinclude -MMD -DSDL_MAIN_USE_CALLBACKS# Puedes agregar -Wall -Wextra para más advertencias
+CXXFLAGS = -g -Wall
 
 # Flags de pkg-config para SDL3
 SDL_FLAGS = $(shell pkg-config --cflags --libs sdl3)

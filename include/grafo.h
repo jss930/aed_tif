@@ -19,6 +19,7 @@ public:
     ~Grafo();
 
     Node *order_nodes(Node *lista, int tam, char type);
+    int *order_nodes_indices(Node *lista, int tam, char type);
     void create_children();
     bool circuleCoalition(Node &tajet, Node *list, int idx, float gap);
     bool frustum(Node &node, SDL_FRect &cam, float px, float py);

@@ -2,6 +2,7 @@
 #include "grafo.h"
 #include "distancia_indice.h"
 #include "sort.h"
+#include "grid.h"
 #include <algorithm>
 #include <time.h>
 #include <random>
@@ -88,6 +89,39 @@ Node *Grafo::order_nodes(Node *lista, int tam, char type) {
     return resultado;
 }
 
+int *Grafo::order_nodes_indices(Node *lista, int tam, char type) {
+    if (tam <= 1) {
+        int *res = new int[tam];
+        if (tam == 1) res[0] = 0;
+        return res;
+    }
+
+    int mitad = tam / 2;
+    int *left = order_nodes_indices(lista, mitad, type);
+    int *right = order_nodes_indices(lista + mitad, tam - mitad, type);
+
+    int *res = new int[tam];
+    int i = 0, j = 0, k = 0;
+
+    while (i < mitad && j < tam - mitad) {
+        float a = (type == 'x') ? lista[left[i]].shape.x : lista[left[i]].shape.y;
+        float b = (type == 'x') ? lista[mitad + right[j]].shape.x : lista[mitad + right[j]].shape.y;
+
+        if (a < b)
+            res[k++] = left[i++];
+        else
+            res[k++] = mitad + right[j++];
+    }
+
+    while (i < mitad) res[k++] = left[i++];
+    while (j < tam - mitad) res[k++] = mitad + right[j++];
+
+    delete[] left;
+    delete[] right;
+
+    return res;
+}
+
 bool esta(int val, Vector<int> &lista) {
     for (size_t i = 0; i < lista.getSize(); i++) {
         if (val == lista[i])
@@ -97,77 +131,88 @@ bool esta(int val, Vector<int> &lista) {
 }
 
 void Grafo::create_children() {
-    const int VENTANA = 15 + (num_nodes / 10) % 50;
     const int NUM_CONEXIONES = 3;
+    Grid2D grid(max_x, max_y);
+    printf("Creando grid para max_x=%.2f, max_y=%.2f...\n", max_x, max_y);
 
-    for (int i = 0; i < num_nodes; i++) {
+    // Paso 1: Insertar todos los nodos en el grid
+    int insertados_ok = 0;
+    for (int i = 0; i < num_nodes; ++i) {
+        float x = map[i].shape.x;
+        float y = map[i].shape.y;
+
+        if (x < 0 || y < 0 || x >= max_x || y >= max_y) {
+            printf("[!] Nodo %d fuera de rango: x=%.2f y=%.2f\n", i, x, y);
+        }
+
+        int cx = (int)(x / CELL_SIZE);
+        int cy = (int)(y / CELL_SIZE);
+
+        printf("Nodo %d: (%.1f, %.1f) -> celda (%d,%d)\n", i, x, y, cx, cy);
+
+        grid.insert(&map[i]);
+        insertados_ok++;
+    }
+
+    printf("[✓] Nodos insertados: %d\n", insertados_ok);
+    printf("Iniciando conexión de vecinos...\n");
+
+    // Paso 2: Conectar cada nodo con sus vecinos más cercanos
+    for (int i = 0; i < num_nodes; ++i) {
+        Vector<Node*> vecinos;
+        grid.getNearby(&map[i], vecinos);
+
         Vector<DistanciaIndice> distancias;
-        Vector<int> insertados;
 
-        for (int j = (i - VENTANA > 0 ? i - VENTANA : 0); j <= (i + VENTANA < num_nodes ? i + VENTANA : num_nodes - 1); j++) {
-            if (i == j) continue;
-            float dx = map[i].shape.x - map[j].shape.x;
-            float dy = map[i].shape.y - map[j].shape.y;
+        for (size_t j = 0; j < vecinos.getSize(); ++j) {
+            Node *otro = vecinos[j];
+            if (otro == &map[i]) continue;
+
+            float dx = map[i].shape.x - otro->shape.x;
+            float dy = map[i].shape.y - otro->shape.y;
             float dist_squared = dx * dx + dy * dy;
 
-            DistanciaIndice di = {dist_squared, j};
+            int idx = (int)(otro - map);  // índice desde puntero
+            DistanciaIndice di = {dist_squared, idx};
             distancias.push_back(di);
-            insertados.push_back(j);
         }
 
-        int pos_en_mapy = -1;
-        for (int k = 0; k < num_nodes; k++) {
-            if (mapy[k].shape.x == map[i].shape.x && mapy[k].shape.y == map[i].shape.y) {
-                pos_en_mapy = k;
-                break;
-            }
-        }
-
-        if (pos_en_mapy != -1) {
-            for (int j = (pos_en_mapy - VENTANA > 0 ? pos_en_mapy - VENTANA : 0);
-                 j <= (pos_en_mapy + VENTANA < num_nodes ? pos_en_mapy + VENTANA : num_nodes - 1); j++) {
-                int idx_en_map = -1;
-                for (int k = 0; k < num_nodes; k++) {
-                    if (map[k].shape.x == mapy[j].shape.x && map[k].shape.y == mapy[j].shape.y) {
-                        idx_en_map = k;
-                        break;
-                    }
-                }
-
-                if (idx_en_map == -1 || idx_en_map == i || esta(idx_en_map, insertados)) continue;
-
-                float dx = map[i].shape.x - map[idx_en_map].shape.x;
-                float dy = map[i].shape.y - map[idx_en_map].shape.y;
-                float dist_squared = dx * dx + dy * dy;
-
-                DistanciaIndice di = {dist_squared, idx_en_map};
-                distancias.push_back(di);
-                insertados.push_back(idx_en_map);
-            }
+        if (distancias.getSize() == 0) {
+            printf("[!] Nodo %d no tiene vecinos cercanos\n", i);
+            continue;
         }
 
         sort(distancias, compararDistancia);
 
-        for (int k = 0; k < NUM_CONEXIONES && k < distancias.getSize(); k++) {
+        int conexiones = 0;
+        for (int k = 0; k < distancias.getSize() && conexiones < NUM_CONEXIONES; ++k) {
             int idx = distancias[k].idx;
+            Node *otro = &map[idx];
+
             bool ya_conectado = false;
-            for (size_t c = 0; c < map[i].childrens.getSize(); ++c) {
-                if (map[i].childrens[c] == &map[idx]) {
+            for (size_t m = 0; m < map[i].childrens.getSize(); ++m) {
+                if (map[i].childrens[m] == otro) {
                     ya_conectado = true;
                     break;
                 }
             }
 
             if (!ya_conectado) {
-                map[i].childrens.push_back(&map[idx]);
-                map[idx].childrens.push_back(&map[i]);
+                map[i].childrens.push_back(otro);
+                otro->childrens.push_back(&map[i]);
+                conexiones++;
             }
         }
 
         if (map[i].childrens.getSize() < NUM_CONEXIONES) {
-            i--;  // reintentar nodo
+            printf("[!] Nodo %d quedó con menos de %d conexiones\n", i, NUM_CONEXIONES);
         }
+
+        if (i % 1000 == 0)
+            printf("Procesando nodo %d/%d\n", i, num_nodes);
     }
+
+    printf("[✓] Conexiones completadas.\n");
 }
 
 bool Grafo::circuleCoalition(Node &tarjet, Node *list, int idx, float gap) {
