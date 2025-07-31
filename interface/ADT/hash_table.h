@@ -55,17 +55,17 @@ public:
         return nullptr;
     }
 
-    std::vector<T> HashTable<T, F, C, S>::getAllElements() const {
-    std::vector<T> elements;
-    for (unsigned i = 0; i < S; i++) {
-        typename ::_Node<T>* current = table[i].getHead();
-        while (current) {
-            elements.push_back(current->value);
-            current = current->next;
+    std::vector<T> getAllElements() const {
+        std::vector<T> elements;
+        for (unsigned i = 0; i < S; i++) {
+            typename ::_Node<T>* current = table[i].getHead();
+            while (current) {
+                elements.push_back(current->value);
+                current = current->next;
+            }
         }
+        return elements;
     }
-    return elements;
-}
 };
 
 #endif
