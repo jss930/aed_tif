@@ -72,6 +72,10 @@ public:
         }
         return false;
     }
+
+    _Node<T>* getHead() {
+        return head;
+    }
 };
 
 #endif

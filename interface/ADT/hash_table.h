@@ -2,6 +2,8 @@
 #define __HASH_TABLE__
 
 #include <stdio.h>
+#include "../_node.h"
+#include <vector>
 
 template <class T, class F, class C, unsigned S>
 class HashTable {
@@ -21,7 +23,7 @@ public:
         delete[] table;
     }
 
-    int hashFunction(int key) {
+    int hashFunction(T key) {
         return hash(key) % S;
     }
 
@@ -39,6 +41,31 @@ public:
         int index = hashFunction(value);
         return table[index].find(value);
     }
+
+    T* get(T value) {
+        int index = hashFunction(value);
+        typename ::_Node<T>* current = table[index].getHead();
+
+        while (current) {
+            if (current->value == value) {
+                return &(current->value);
+            }
+            current = current->next;
+        }
+        return nullptr;
+    }
+
+    std::vector<T> HashTable<T, F, C, S>::getAllElements() const {
+    std::vector<T> elements;
+    for (unsigned i = 0; i < S; i++) {
+        typename ::_Node<T>* current = table[i].getHead();
+        while (current) {
+            elements.push_back(current->value);
+            current = current->next;
+        }
+    }
+    return elements;
+}
 };
 
 #endif
