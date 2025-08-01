@@ -364,6 +364,7 @@ void Grafo::selectNodo(float posX, float posY, std::string tipo)
             return;
         }
     }
+    printf("[-] NO se seleccionó nodo D:\n")
 }
 
 Grafo::~Grafo()
