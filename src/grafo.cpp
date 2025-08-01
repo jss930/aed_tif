@@ -2,14 +2,14 @@
 #include "distancia_indice.h"
 #include "sort.h"
 #include "grid.h"
-#include "vector"
+#include "myvector.h"
 #include <time.h>
 #include <random>
 #include <cmath>
 #include <thread>
 #include <future>
 #include <mutex>
-#include <vector>
+// #include <vector>
 #include <SDL2/SDL.h>
 #include "delaunator.hpp"
 
@@ -19,18 +19,28 @@ Grafo::Grafo(const int number_nodes)
 {
     int coalition_count = 0;
     this->num_nodes = number_nodes;
+<<<<<<< HEAD
     this->max_x = WINDOW_WIDTH;
     this->nodos_renderizados = new Vector<Node *>;
     float factor = (float)(number_nodes) / WINDOW_WIDTH;
     float porcentaje = factor * (RADIUS + GAP);
     if (porcentaje > 0.50 || RADIUS * num_nodes > WINDOW_WIDTH * 0.8)
         this->max_x += WINDOW_WIDTH * factor / 0.70;
+=======
+>>>>>>> 00b7f84d6b2267a77abdb0b3f2f1ae996cfb6dfc
 
+    // Área inicial más conservadora
+    this->max_x = WINDOW_WIDTH;
     this->max_y = WINDOW_HEIGHT;
-    factor = (float)(number_nodes) / WINDOW_HEIGHT;
-    porcentaje = factor * (RADIUS + GAP);
-    if (porcentaje > 0.75 || RADIUS * num_nodes > WINDOW_HEIGHT * 0.8)
-        this->max_y += WINDOW_HEIGHT * factor / 0.8;
+
+    // Solo expandir si realmente es necesario
+    float density_factor = (float)(number_nodes) / (WINDOW_WIDTH * WINDOW_HEIGHT) * (RADIUS + GAP) * (RADIUS + GAP);
+    if (density_factor > 0.3)
+    {
+        float expansion = sqrt(density_factor / 0.3);
+        this->max_x *= expansion;
+        this->max_y *= expansion;
+    }
 
     srand(time(0));
     SDL_srand(time(0));
@@ -41,33 +51,57 @@ Grafo::Grafo(const int number_nodes)
     std::uniform_real_distribution<float> dist_x(RADIUS, max_x - RADIUS);
     std::uniform_real_distribution<float> dist_y(RADIUS, max_y - RADIUS);
 
+    float cantidad_colision = 1;
     for (int i = 0; i < number_nodes; i++)
     {
-        map[i].shape.x = dist_x(gen);
-        map[i].shape.y = dist_y(gen);
+        bool placed = false;
+        int attempts = 0;
+        const int max_attempts = 100;
 
-        if (coalition_count > 10)
+        while (!placed && attempts < max_attempts)
         {
-            printf("redimensionando área...\n");
-            coalition_count = 0;
-            max_x += WINDOW_WIDTH * 0.3f * (float)(i) / num_nodes;
-            max_y += WINDOW_HEIGHT * 0.1f * (float)(i) / num_nodes;
+            map[i].shape.x = dist_x(gen);
+            map[i].shape.y = dist_y(gen);
+
+            if (!circuleCoalition(map[i], map, i, GAP))
+            {
+                placed = true;
+            }
+            else
+            {
+                attempts++;
+                coalition_count++;
+            }
         }
 
-        if (circuleCoalition(map[i], map, i, GAP))
+        // Si no se pudo colocar después de muchos intentos, expandir área MÍNIMAMENTE
+        if (!placed)
         {
-            coalition_count++;
-            i--;
+            cantidad_colision++;
+            printf("redimensionando área... (nodo %d)\n", i);
+            coalition_count = 0;
+
+            // Expansión mucho más pequeña y progresiva
+            max_x += WINDOW_WIDTH * 0.05f;  // 5% en lugar de 30%
+            max_y += WINDOW_HEIGHT * 0.05f; // 5% en lugar de 20%
+
+            // Actualizar la distribución con el nuevo área
+            dist_x = std::uniform_real_distribution<float>(RADIUS, max_x - RADIUS);
+            dist_y = std::uniform_real_distribution<float>(RADIUS, max_y - RADIUS);
+
+            // Intentar colocar el nodo en el área expandida
+            i--; // Reintentar este nodo
             continue;
         }
     }
 
-    map = order_nodes(map, num_nodes, 'x');
-    mapy = order_nodes(map, num_nodes, 'y');
+    this->map = order_nodes(this->map, num_nodes, 'x');
+    this->mapy = order_nodes(this->map, num_nodes, 'y');
     create_children_parallel();
 
     printf("[+] Grafo creado...\n");
-    printf("number_nodos : %d\nwidth : %1.f\tmax_x : %2.f\nheigth : %1.f\tmax_y : %2.f\n", number_nodes, WINDOW_WIDTH, max_x, WINDOW_HEIGHT, max_y);
+    printf("number_nodos : %d\nwidth : %.1f\tmax_x : %.2f\nheight : %.1f\tmax_y : %.2f\n",
+           number_nodes, WINDOW_WIDTH, max_x, WINDOW_HEIGHT, max_y);
     printf("coalitions : %d\n", coalition_count);
 }
 
