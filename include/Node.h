@@ -9,6 +9,8 @@ class Node
 public:
     SDL_FPoint shape;
     Vector<Node *> childrens;
+    bool visited = false;
+    Node* parent = nullptr;
 
     Node(float x, float y);
     Node();

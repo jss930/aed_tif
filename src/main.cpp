@@ -1,4 +1,4 @@
-#define SDL_MAIN_USE_CALLBACKS 1 /* use the callbacks instead of main() */
+#define SDL_MAIN_USE_CALLBACKS 1 
 #include "general.h"
 #include "grafo.h"
 #include <SDL3/SDL_main.h>
@@ -86,6 +86,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     {
       printf("RIGHT clic\n");
       grafo->selectNodo(event->button.x, event->button.y, "final", pos_x, pos_y);
+      grafo->buscarRutaBFS();
     }
   }
   return SDL_APP_CONTINUE;

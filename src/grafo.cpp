@@ -14,13 +14,13 @@
 #include "delaunator.hpp"
 
 int general_nodes_count = 0;
-Vector<Node *> *nodos_renderizados;
 
 Grafo::Grafo(const int number_nodes)
 {
     int coalition_count = 0;
     this->num_nodes = number_nodes;
     this->max_x = WINDOW_WIDTH;
+    this->nodos_renderizados = new Vector<Node *>;
     float factor = (float)(number_nodes) / WINDOW_WIDTH;
     float porcentaje = factor * (RADIUS + GAP);
     if (porcentaje > 0.50 || RADIUS * num_nodes > WINDOW_WIDTH * 0.8)
@@ -158,7 +158,7 @@ void Grafo::create_children_parallel()
     for (auto &fut : workers)
         fut.get();
 
-    printf("[✓] Conexiones completadas (paralelo).\n");
+    printf("Conexiones completadas (paralelo).\n");
 }
 
 Node *Grafo::order_nodes(Node *lista, int tam, char type)
@@ -232,18 +232,25 @@ void Grafo::render(SDL_Renderer *renderer, float &pos_x, float &pos_y)
     {
         if (frustum(map[i], cam, pos_x, pos_y))
         {
+            // Dibujar aristas
             for (size_t j = 0; j < map[i].childrens.getSize(); j++)
             {
                 renderAristas(renderer, &map[i], map[i].childrens[j], pos_x, pos_y);
             }
+
+            // Guardar nodo visible
             count_nodes_renderer++;
             tmp_nodos_renderizados->push_back(&map[i]);
+
+            // Seleccionar color según tipo
             if (&map[i] == tarjet)
                 SDL_SetRenderDrawColor(renderer, COLOR_RED, SDL_ALPHA_OPAQUE);
             else if (&map[i] == start)
                 SDL_SetRenderDrawColor(renderer, COLOR_VERDE, SDL_ALPHA_OPAQUE);
             else
                 SDL_SetRenderDrawColor(renderer, COLOR_GREY, SDL_ALPHA_OPAQUE);
+
+            // Dibujar nodo como círculo
             for (float x = map[i].shape.x - RADIUS; x < map[i].shape.x + RADIUS; x++)
                 for (float y = map[i].shape.y - RADIUS; y < map[i].shape.y + RADIUS; y++)
                 {
@@ -256,11 +263,26 @@ void Grafo::render(SDL_Renderer *renderer, float &pos_x, float &pos_y)
                 }
         }
     }
+
+    // Dibujar ruta si existe
+    if (start && tarjet && tarjet->parent)
+    {
+        SDL_SetRenderDrawColor(renderer, COLOR_BLUE, SDL_ALPHA_OPAQUE);
+        for (Node *n = tarjet; n->parent != nullptr; n = n->parent)
+        {
+            SDL_RenderLine(renderer,
+                           n->shape.x + pos_x, n->shape.y + pos_y,
+                           n->parent->shape.x + pos_x, n->parent->shape.y + pos_y);
+        }
+    }
+
+    // Actualizar nodos renderizados visibles
     if (general_nodes_count != count_nodes_renderer)
     {
-        if (nodos_renderizados)
-            delete nodos_renderizados;
-        nodos_renderizados = tmp_nodos_renderizados;
+        if (this->nodos_renderizados)
+            delete this->nodos_renderizados;
+        this->nodos_renderizados = tmp_nodos_renderizados;
+
         printf("%d nodos renderizados\n", count_nodes_renderer);
         general_nodes_count = count_nodes_renderer;
     }
@@ -292,9 +314,11 @@ void Grafo::selectNodo(float posX, float posY, std::string tipo, int pos_x, int 
     printf("%.2f x - %.2f y   ", posX, posY);
 
     float radius_squared = SDL_pow(RADIUS * 2, 2) + 3;
-    for (int i = 0; i < nodos_renderizados->getSize(); i++)
-    {
-        Node *nodo = (*nodos_renderizados)[i];
+    if (!this->nodos_renderizados) return;
+
+    for (int i = 0; i < this->nodos_renderizados->getSize(); i++) {
+        Node *nodo = (*this->nodos_renderizados)[i];
+
 
         float dx = nodo->shape.x + pos_x - posX;
         float dy = nodo->shape.y + pos_y - posY;
@@ -327,4 +351,38 @@ Grafo::~Grafo()
         delete[] map;
     if (mapy)
         delete[] mapy;
+}
+
+bool Grafo::buscarRutaBFS()
+{
+    if (!start || !tarjet)
+        return false;
+
+    // Resetear nodos
+    for (int i = 0; i < num_nodes; i++) {
+        map[i].visited = false;
+        map[i].parent = nullptr;
+    }
+
+    Vector<Node*> queue;
+    start->visited = true;
+    queue.push_back(start);
+
+    int front = 0;
+    while (front < queue.getSize()) {
+        Node* current = queue[front++];
+        if (current == tarjet)
+            break;
+
+        for (size_t i = 0; i < current->childrens.getSize(); ++i) {
+            Node* neighbor = current->childrens[i];
+            if (!neighbor->visited) {
+                neighbor->visited = true;
+                neighbor->parent = current;
+                queue.push_back(neighbor);
+            }
+        }
+    }
+
+    return tarjet->parent != nullptr;
 }

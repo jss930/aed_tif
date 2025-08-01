@@ -4,6 +4,7 @@
 #include <string>
 #include "Node.h"
 #include "general.h"
+#include "myvector.h"
 
 class Grafo
 {
@@ -13,6 +14,8 @@ private:
     Node *map;  // nodos ordenados por X
     Node *mapy; // nodos ordenados por Y
     int num_nodes;
+
+    Vector<Node *> *nodos_renderizados = nullptr;
 
 public:
     float max_x, max_y;
@@ -34,6 +37,9 @@ public:
     void renderAristas(SDL_Renderer *renderer, Node *n1, Node *n2, int pos_x, int pos_y);
 
     void selectNodo(float posx, float posY, std::string tipo, int pos_x, int pos_y);
+
+    bool buscarRutaBFS(); 
+
 };
 
 #endif
