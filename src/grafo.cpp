@@ -19,15 +19,12 @@ Grafo::Grafo(const int number_nodes)
 {
     int coalition_count = 0;
     this->num_nodes = number_nodes;
-<<<<<<< HEAD
     this->max_x = WINDOW_WIDTH;
     this->nodos_renderizados = new Vector<Node *>;
     float factor = (float)(number_nodes) / WINDOW_WIDTH;
     float porcentaje = factor * (RADIUS + GAP);
     if (porcentaje > 0.50 || RADIUS * num_nodes > WINDOW_WIDTH * 0.8)
         this->max_x += WINDOW_WIDTH * factor / 0.70;
-=======
->>>>>>> 00b7f84d6b2267a77abdb0b3f2f1ae996cfb6dfc
 
     // Área inicial más conservadora
     this->max_x = WINDOW_WIDTH;
@@ -299,11 +296,9 @@ void Grafo::render(SDL_Renderer *renderer, float &pos_x, float &pos_y)
     }
 
     // Dibujar ruta si existe
-    if (start && tarjet && tarjet->parent)
-    {
+    if (start && tarjet && tarjet->parent) {
         SDL_SetRenderDrawColor(renderer, COLOR_BLUE, SDL_ALPHA_OPAQUE);
-        for (Node *n = tarjet; n->parent != nullptr; n = n->parent)
-        {
+        for (Node *n = tarjet; n && n->parent; n = n->parent) {
             SDL_RenderLine(renderer,
                            n->shape.x + pos_x, n->shape.y + pos_y,
                            n->parent->shape.x + pos_x, n->parent->shape.y + pos_y);
@@ -311,17 +306,14 @@ void Grafo::render(SDL_Renderer *renderer, float &pos_x, float &pos_y)
     }
 
     // Actualizar nodos renderizados visibles
-    if (general_nodes_count != count_nodes_renderer)
-    {
-        if (this->nodos_renderizados)
+    if (general_nodes_count != count_nodes_renderer) {
+        if (this->nodos_renderizados) {
             delete this->nodos_renderizados;
+            this->nodos_renderizados = nullptr;
+        }
         this->nodos_renderizados = tmp_nodos_renderizados;
-
-        printf("%d nodos renderizados\n", count_nodes_renderer);
         general_nodes_count = count_nodes_renderer;
-    }
-    else
-    {
+    } else {
         delete tmp_nodos_renderizados;
     }
 }
@@ -343,37 +335,20 @@ void Grafo::renderAristas(SDL_Renderer *renderer, Node *n1, Node *n2, int pos_x,
                    n2->shape.x + pos_x, n2->shape.y + pos_y);
 }
 
-void Grafo::selectNodo(float posX, float posY, std::string tipo, int pos_x, int pos_y)
-{
-    printf("%.2f x - %.2f y   ", posX, posY);
-
-    float radius_squared = SDL_pow(RADIUS * 2, 2) + 3;
+void Grafo::selectNodo(float posX, float posY, std::string tipo, int pos_x, int pos_y) {
     if (!this->nodos_renderizados) return;
-
     for (int i = 0; i < this->nodos_renderizados->getSize(); i++) {
         Node *nodo = (*this->nodos_renderizados)[i];
-
-
         float dx = nodo->shape.x + pos_x - posX;
         float dy = nodo->shape.y + pos_y - posY;
         float distance_squared = dx * dx + dy * dy;
-
-        if (distance_squared <= radius_squared)
-        {
-            if (tipo == "inicio")
-            {
-                this->start = nodo;
+        if (distance_squared <= SDL_pow(RADIUS * 2, 2) + 3) {
+            if (tipo == "inicio") this->start = nodo;
+            else if (tipo == "final") this->tarjet = nodo;
+            if (this->tarjet == this->start) {
+                if (tipo == "final") this->start = nullptr;
+                else this->tarjet = nullptr;
             }
-            else if (tipo == "final")
-            {
-                this->tarjet = nodo;
-            }
-            if (this->tarjet == this->start)
-                if (tipo == "final")
-                    this->start = NULL;
-                else
-                    this->tarjet = NULL;
-            printf("Nodo %s seleccionado en %.2f x - %.2f y\n", tipo.c_str(), nodo->shape.x, nodo->shape.y);
             return;
         }
     }

@@ -5,7 +5,7 @@
 #include <iostream>
 
 #define VELOCIDAD 1
-#define TOTAL_NODES 10000
+#define TOTAL_NODES 1000
 
 Grafo *grafo;
 float pos_x = RADIUS;
