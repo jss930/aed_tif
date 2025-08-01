@@ -1,10 +1,11 @@
 #ifndef __SORT_H__
 #define __SORT_H__
 
-#include "vector.h"
+#include "myvector.h"
 
 template <typename T>
-void merge(Vector<T> &arr, int left, int mid, int right, bool (*compare)(const T &, const T &)) {
+void merge(Vector<T> &arr, int left, int mid, int right, bool (*compare)(const T &, const T &))
+{
     int n1 = mid - left + 1;
     int n2 = right - mid;
 
@@ -15,21 +16,29 @@ void merge(Vector<T> &arr, int left, int mid, int right, bool (*compare)(const T
         R.push_back(arr[mid + 1 + j]);
 
     int i = 0, j = 0, k = left;
-    while (i < L.getSize() && j < R.getSize()) {
-        if (compare(L[i], R[j])) {
+    while (i < L.getSize() && j < R.getSize())
+    {
+        if (compare(L[i], R[j]))
+        {
             arr[k++] = L[i++];
-        } else {
+        }
+        else
+        {
             arr[k++] = R[j++];
         }
     }
 
-    while (i < L.getSize()) arr[k++] = L[i++];
-    while (j < R.getSize()) arr[k++] = R[j++];
+    while (i < L.getSize())
+        arr[k++] = L[i++];
+    while (j < R.getSize())
+        arr[k++] = R[j++];
 }
 
 template <typename T>
-void mergeSort(Vector<T> &arr, int left, int right, bool (*compare)(const T &, const T &)) {
-    if (left < right) {
+void mergeSort(Vector<T> &arr, int left, int right, bool (*compare)(const T &, const T &))
+{
+    if (left < right)
+    {
         int mid = (left + right) / 2;
         mergeSort(arr, left, mid, compare);
         mergeSort(arr, mid + 1, right, compare);
@@ -38,7 +47,8 @@ void mergeSort(Vector<T> &arr, int left, int right, bool (*compare)(const T &, c
 }
 
 template <typename T>
-void sort(Vector<T> &arr, bool (*compare)(const T &, const T &)) {
+void sort(Vector<T> &arr, bool (*compare)(const T &, const T &))
+{
     if (arr.getSize() > 1)
         mergeSort(arr, 0, arr.getSize() - 1, compare);
 }

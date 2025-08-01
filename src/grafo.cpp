@@ -1,4 +1,3 @@
-// #include "general.h"
 #include "grafo.h"
 #include "distancia_indice.h"
 #include "sort.h"
@@ -6,6 +5,13 @@
 #include "vector"
 #include <time.h>
 #include <random>
+#include <cmath>
+#include <thread>
+#include <future>
+#include <mutex>
+#include <vector>
+#include <SDL2/SDL.h>
+#include "delaunator.hpp"
 
 int general_nodes_count = 0;
 Vector<Node *> *nodos_renderizados;
@@ -31,10 +37,14 @@ Grafo::Grafo(const int number_nodes)
     this->map = new Node[number_nodes];
     this->mapy = new Node[number_nodes];
 
+    std::mt19937 gen((unsigned)time(0));
+    std::uniform_real_distribution<float> dist_x(RADIUS, max_x - RADIUS);
+    std::uniform_real_distribution<float> dist_y(RADIUS, max_y - RADIUS);
+
     for (int i = 0; i < number_nodes; i++)
     {
-        map[i].shape.x = SDL_randf() * (max_x - RADIUS) + RADIUS;
-        map[i].shape.y = SDL_randf() * (max_y - RADIUS) + RADIUS;
+        map[i].shape.x = dist_x(gen);
+        map[i].shape.y = dist_y(gen);
 
         if (coalition_count > 10)
         {
@@ -54,11 +64,101 @@ Grafo::Grafo(const int number_nodes)
 
     map = order_nodes(map, num_nodes, 'x');
     mapy = order_nodes(map, num_nodes, 'y');
-    create_children();
+    create_children_parallel();
 
     printf("[+] Grafo creado...\n");
     printf("number_nodos : %d\nwidth : %1.f\tmax_x : %2.f\nheigth : %1.f\tmax_y : %2.f\n", number_nodes, WINDOW_WIDTH, max_x, WINDOW_HEIGHT, max_y);
     printf("coalitions : %d\n", coalition_count);
+}
+
+void Grafo::create_children_parallel()
+{
+    std::vector<double> coords;
+    for (int i = 0; i < num_nodes; ++i)
+    {
+        coords.push_back(map[i].shape.x);
+        coords.push_back(map[i].shape.y);
+    }
+
+    delaunator::Delaunator d(coords);
+
+    const int NUM_CONEXIONES = 3;
+    std::mutex mtx;
+    int nthreads = std::min(unsigned(std::thread::hardware_concurrency()), unsigned(num_nodes));
+    int chunk = num_nodes / nthreads;
+
+    std::vector<std::future<void>> workers;
+
+    for (int t = 0; t < nthreads; ++t)
+    {
+        int start = t * chunk;
+        int end = (t == nthreads - 1) ? num_nodes : start + chunk;
+
+        workers.push_back(std::async(std::launch::async, [=, &mtx, this, &d]()
+                                     {
+            for (int i = start; i < end; ++i)
+            {
+                Vector<Node *> vecinos;
+                for (size_t k = 0; k < d.triangles.size(); k += 3)
+                {
+                    int i0 = d.triangles[k];
+                    int i1 = d.triangles[k + 1];
+                    int i2 = d.triangles[k + 2];
+                    if (i0 == i || i1 == i || i2 == i)
+                    {
+                        if (i0 != i)
+                            vecinos.push_back(&map[i0]);
+                        if (i1 != i)
+                            vecinos.push_back(&map[i1]);
+                        if (i2 != i)
+                            vecinos.push_back(&map[i2]);
+                    }
+                }
+
+                Vector<DistanciaIndice> distancias;
+                for (size_t j = 0; j < vecinos.getSize(); ++j)
+                {
+                    Node *otro = vecinos[j];
+                    float dx = map[i].shape.x - otro->shape.x;
+                    float dy = map[i].shape.y - otro->shape.y;
+                    float dist_squared = dx * dx + dy * dy;
+                    int idx = (int)(otro - map);
+                    distancias.push_back({dist_squared, idx});
+                }
+
+                sort(distancias, compararDistancia);
+                int conexiones = 0;
+
+                std::lock_guard<std::mutex> lock(mtx);
+                for (int k = 0; k < distancias.getSize() && conexiones < NUM_CONEXIONES; ++k)
+                {
+                    int idx = distancias[k].idx;
+                    Node *otro = &map[idx];
+
+                    bool ya_conectado = false;
+                    for (size_t m = 0; m < map[i].childrens.getSize(); ++m)
+                    {
+                        if (map[i].childrens[m] == otro)
+                        {
+                            ya_conectado = true;
+                            break;
+                        }
+                    }
+
+                    if (!ya_conectado)
+                    {
+                        map[i].childrens.push_back(otro);
+                        otro->childrens.push_back(&map[i]);
+                        conexiones++;
+                    }
+                }
+            } }));
+    }
+
+    for (auto &fut : workers)
+        fut.get();
+
+    printf("[✓] Conexiones completadas (paralelo).\n");
 }
 
 Node *Grafo::order_nodes(Node *lista, int tam, char type)
@@ -95,152 +195,6 @@ Node *Grafo::order_nodes(Node *lista, int tam, char type)
     delete[] temp1;
     delete[] temp2;
     return resultado;
-}
-
-int *Grafo::order_nodes_indices(Node *lista, int tam, char type)
-{
-    if (tam <= 1)
-    {
-        int *res = new int[tam];
-        if (tam == 1)
-            res[0] = 0;
-        return res;
-    }
-
-    int mitad = tam / 2;
-    int *left = order_nodes_indices(lista, mitad, type);
-    int *right = order_nodes_indices(lista + mitad, tam - mitad, type);
-
-    int *res = new int[tam];
-    int i = 0, j = 0, k = 0;
-
-    while (i < mitad && j < tam - mitad)
-    {
-        float a = (type == 'x') ? lista[left[i]].shape.x : lista[left[i]].shape.y;
-        float b = (type == 'x') ? lista[mitad + right[j]].shape.x : lista[mitad + right[j]].shape.y;
-
-        if (a < b)
-            res[k++] = left[i++];
-        else
-            res[k++] = mitad + right[j++];
-    }
-
-    while (i < mitad)
-        res[k++] = left[i++];
-    while (j < tam - mitad)
-        res[k++] = mitad + right[j++];
-
-    delete[] left;
-    delete[] right;
-
-    return res;
-}
-
-bool esta(int val, Vector<int> &lista)
-{
-    for (size_t i = 0; i < lista.getSize(); i++)
-    {
-        if (val == lista[i])
-            return true;
-    }
-    return false;
-}
-
-void Grafo::create_children()
-{
-    const int NUM_CONEXIONES = 3;
-    Grid2D grid(max_x, max_y);
-    printf("Creando grid para max_x=%.2f, max_y=%.2f...\n", max_x, max_y);
-
-    // Paso 1: Insertar todos los nodos en el grid
-    int insertados_ok = 0;
-    for (int i = 0; i < num_nodes; ++i)
-    {
-        float x = map[i].shape.x;
-        float y = map[i].shape.y;
-
-        if (x < 0 || y < 0 || x >= max_x || y >= max_y)
-        {
-            printf("[!] Nodo %d fuera de rango: x=%.2f y=%.2f\n", i, x, y);
-        }
-
-        int cx = (int)(x / CELL_SIZE);
-        int cy = (int)(y / CELL_SIZE);
-
-        printf("Nodo %d: (%.1f, %.1f) -> celda (%d,%d)\n", i, x, y, cx, cy);
-
-        grid.insert(&map[i]);
-        insertados_ok++;
-    }
-
-    printf("[✓] Nodos insertados: %d\n", insertados_ok);
-    printf("Iniciando conexión de vecinos...\n");
-
-    // Paso 2: Conectar cada nodo con sus vecinos más cercanos
-    for (int i = 0; i < num_nodes; ++i)
-    {
-        Vector<Node *> vecinos;
-        grid.getNearby(&map[i], vecinos);
-
-        Vector<DistanciaIndice> distancias;
-
-        for (size_t j = 0; j < vecinos.getSize(); ++j)
-        {
-            Node *otro = vecinos[j];
-            if (otro == &map[i])
-                continue;
-
-            float dx = map[i].shape.x - otro->shape.x;
-            float dy = map[i].shape.y - otro->shape.y;
-            float dist_squared = dx * dx + dy * dy;
-
-            int idx = (int)(otro - map); // índice desde puntero
-            DistanciaIndice di = {dist_squared, idx};
-            distancias.push_back(di);
-        }
-
-        if (distancias.getSize() == 0)
-        {
-            printf("[!] Nodo %d no tiene vecinos cercanos\n", i);
-            continue;
-        }
-
-        sort(distancias, compararDistancia);
-
-        int conexiones = 0;
-        for (int k = 0; k < distancias.getSize() && conexiones < NUM_CONEXIONES; ++k)
-        {
-            int idx = distancias[k].idx;
-            Node *otro = &map[idx];
-
-            bool ya_conectado = false;
-            for (size_t m = 0; m < map[i].childrens.getSize(); ++m)
-            {
-                if (map[i].childrens[m] == otro)
-                {
-                    ya_conectado = true;
-                    break;
-                }
-            }
-
-            if (!ya_conectado)
-            {
-                map[i].childrens.push_back(otro);
-                otro->childrens.push_back(&map[i]);
-                conexiones++;
-            }
-        }
-
-        if (map[i].childrens.getSize() < NUM_CONEXIONES)
-        {
-            printf("[!] Nodo %d quedó con menos de %d conexiones\n", i, NUM_CONEXIONES);
-        }
-
-        if (i % 1000 == 0)
-            printf("Procesando nodo %d/%d\n", i, num_nodes);
-    }
-
-    printf("[✓] Conexiones completadas.\n");
 }
 
 bool Grafo::circuleCoalition(Node &tarjet, Node *list, int idx, float gap)
@@ -333,16 +287,17 @@ void Grafo::renderAristas(SDL_Renderer *renderer, Node *n1, Node *n2, int pos_x,
                    n2->shape.x + pos_x, n2->shape.y + pos_y);
 }
 
-void Grafo::selectNodo(float posX, float posY, std::string tipo)
+void Grafo::selectNodo(float posX, float posY, std::string tipo, int pos_x, int pos_y)
 {
-    float radius_squared = SDL_pow(RADIUS * 2, 2) + 3;
+    printf("%.2f x - %.2f y   ", posX, posY);
 
+    float radius_squared = SDL_pow(RADIUS * 2, 2) + 3;
     for (int i = 0; i < nodos_renderizados->getSize(); i++)
     {
         Node *nodo = (*nodos_renderizados)[i];
 
-        float dx = nodo->shape.x - posX;
-        float dy = nodo->shape.y - posY;
+        float dx = nodo->shape.x + pos_x - posX;
+        float dy = nodo->shape.y + pos_y - posY;
         float distance_squared = dx * dx + dy * dy;
 
         if (distance_squared <= radius_squared)
@@ -364,7 +319,6 @@ void Grafo::selectNodo(float posX, float posY, std::string tipo)
             return;
         }
     }
-    printf("[-] NO se seleccionó nodo D:\n")
 }
 
 Grafo::~Grafo()

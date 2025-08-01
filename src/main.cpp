@@ -5,7 +5,7 @@
 #include <iostream>
 
 #define VELOCIDAD 1
-#define TOTAL_NODES 100
+#define TOTAL_NODES 1000
 
 Grafo *grafo;
 float pos_x = RADIUS;
@@ -80,12 +80,12 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     if (event->button.button == SDL_BUTTON_LEFT)
     {
       printf("LEFT clic\n");
-      grafo->selectNodo(event->button.x, event->button.y, "inicio");
+      grafo->selectNodo(event->button.x, event->button.y, "inicio", pos_x, pos_y);
     }
     else if (event->button.button == SDL_BUTTON_RIGHT)
     {
       printf("RIGHT clic\n");
-      grafo->selectNodo(event->button.x, event->button.y, "final");
+      grafo->selectNodo(event->button.x, event->button.y, "final", pos_x, pos_y);
     }
   }
   return SDL_APP_CONTINUE;

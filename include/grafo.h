@@ -22,7 +22,10 @@ public:
 
     Node *order_nodes(Node *lista, int tam, char type);
     int *order_nodes_indices(Node *lista, int tam, char type);
+    void create_children_parallel();
     void create_children();
+    void generateNodesPoisson();
+    void addConnection(int i, int j);
     bool circuleCoalition(Node &tajet, Node *list, int idx, float gap);
     bool frustum(Node &node, SDL_FRect &cam, float px, float py);
 
@@ -30,7 +33,7 @@ public:
     void renderAristas(SDL_Renderer *renderer, int indx, int pos_x, int pos_y);
     void renderAristas(SDL_Renderer *renderer, Node *n1, Node *n2, int pos_x, int pos_y);
 
-    void selectNodo(float posx, float posY, std::string tipo);
+    void selectNodo(float posx, float posY, std::string tipo, int pos_x, int pos_y);
 };
 
 #endif
