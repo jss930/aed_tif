@@ -4,11 +4,13 @@
 #include <SDL3/SDL_main.h>
 #include <iostream>
 
+#define VELOCIDAD 1
+#define TOTAL_NODES 100
+
 Grafo *grafo;
 float pos_x = RADIUS;
 float pos_y = RADIUS;
-#define VELOCIDAD 1
-#define TOTAL_NODES 100
+bool se_deplazo;
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
@@ -42,11 +44,12 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
   //! movimiento
   if (event->type == SDL_EVENT_MOUSE_MOTION)
   {
+    se_deplazo = true;
     //? click derecho
     if (event->motion.state == 4)
     {
       printf("RIGHT clic\n");
-      //  printf("movimiento en %2.f - %2.f\n", event->motion.x, event->motion.y);
+      printf("movimiento en %2.f - %2.f\n", event->motion.x, event->motion.y);
     }
     else if (event->motion.state == SDL_BUTTON_LEFT)
     {
@@ -61,20 +64,28 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
       {
         pos_y = tmp;
       }
-      // printf("actualizar: %2.f - %2.f\n", pos_x, pos_y);
+      printf("actualizar: %2.f - %2.f\n", pos_x, pos_y);
     }
   }
+
+  if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+  {
+    se_deplazo = false;
+  }
+
   //! levanta click
-  if (event->type == SDL_EVENT_MOUSE_BUTTON_UP)
+  if (event->type == SDL_EVENT_MOUSE_BUTTON_UP && !se_deplazo)
   {
     printf("levantado ");
     if (event->button.button == SDL_BUTTON_LEFT)
     {
       printf("LEFT clic\n");
+      grafo->selectNodo(event->button.x, event->button.y, "inicio");
     }
     else if (event->button.button == SDL_BUTTON_RIGHT)
     {
       printf("RIGHT clic\n");
+      grafo->selectNodo(event->button.x, event->button.y, "final");
     }
   }
   return SDL_APP_CONTINUE;
