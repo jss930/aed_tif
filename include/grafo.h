@@ -39,7 +39,7 @@ public:
     void selectNodo(float posx, float posY, std::string tipo, int pos_x, int pos_y);
 
     bool buscarRutaBFS(); 
-
+    bool buscarRutaAEstrella();
 };
 
 #endif

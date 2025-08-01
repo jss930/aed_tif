@@ -12,18 +12,21 @@ float pos_x = RADIUS;
 float pos_y = RADIUS;
 bool se_deplazo;
 
+enum SearchMode { BFS, ASTAR };
+SearchMode modoBusqueda = ASTAR; 
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
 
   if (!SDL_Init(SDL_INIT_VIDEO))
   {
-    SDL_Log("[-] No se puede inicializar video: %s", SDL_GetError());
+    SDL_Log("No se puede inicializar video: %s", SDL_GetError());
     return SDL_APP_FAILURE;
   }
 
   if (!SDL_CreateWindowAndRenderer("Google Maps Chafa", WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer))
   {
-    SDL_Log("[-] No se puede crear window/renderer: %s", SDL_GetError());
+    SDL_Log("No se puede crear window/renderer: %s", SDL_GetError());
     return SDL_APP_FAILURE;
   }
   grafo = new Grafo(TOTAL_NODES);
@@ -37,9 +40,22 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
   {
     return SDL_APP_SUCCESS;
   }
-  if (event->type == SDL_EVENT_KEY_DOWN)
+  if (event->type == SDL_EVENT_KEY_DOWN) {
     if (event->key.key == 27)
       return SDL_APP_SUCCESS;
+
+    if (event->key.scancode == SDL_SCANCODE_B)
+ {
+      modoBusqueda = BFS;
+      printf("Modo de búsqueda: BFS\n");
+    }
+    else if (event->key.scancode == SDL_SCANCODE_A)
+ {
+      modoBusqueda = ASTAR;
+      printf("Modo de búsqueda: A*\n");
+    }
+
+  }
 
   //! movimiento
   if (event->type == SDL_EVENT_MOUSE_MOTION)

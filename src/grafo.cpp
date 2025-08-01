@@ -15,6 +15,12 @@
 
 int general_nodes_count = 0;
 
+float heuristica(Node* a, Node* b) {
+    float dx = a->shape.x - b->shape.x;
+    float dy = a->shape.y - b->shape.y;
+    return sqrt(dx * dx + dy * dy);
+}
+
 Grafo::Grafo(const int number_nodes)
 {
     int coalition_count = 0;
@@ -43,6 +49,9 @@ Grafo::Grafo(const int number_nodes)
     SDL_srand(time(0));
     this->map = new Node[number_nodes];
     this->mapy = new Node[number_nodes];
+
+    this->start = nullptr;
+    this->tarjet = nullptr;
 
     std::mt19937 gen((unsigned)time(0));
     std::uniform_real_distribution<float> dist_x(RADIUS, max_x - RADIUS);
@@ -296,7 +305,7 @@ void Grafo::render(SDL_Renderer *renderer, float &pos_x, float &pos_y)
     }
 
     // Dibujar ruta si existe
-    if (start && tarjet && tarjet->parent) {
+    if (start && tarjet && tarjet->parent && tarjet >= map && tarjet < map + num_nodes) {
         SDL_SetRenderDrawColor(renderer, COLOR_BLUE, SDL_ALPHA_OPAQUE);
         for (Node *n = tarjet; n && n->parent; n = n->parent) {
             SDL_RenderLine(renderer,
@@ -394,4 +403,73 @@ bool Grafo::buscarRutaBFS()
     }
 
     return tarjet->parent != nullptr;
+}
+
+bool Grafo::buscarRutaAEstrella() {
+    if (!start || !tarjet) return false;
+
+    for (int i = 0; i < num_nodes; ++i) {
+        map[i].visited = false;
+        map[i].parent = nullptr;
+        map[i].g = INFINITY;
+        map[i].h = 0;
+        map[i].f = INFINITY;
+    }
+
+    start->g = 0;
+    start->h = heuristica(start, tarjet);
+    start->f = start->h;
+
+    Vector<Node*> openSet;
+    openSet.push_back(start);
+
+    while (openSet.getSize() > 0) {
+        // Buscar el nodo con menor f en openSet
+        int bestIndex = 0;
+        for (int i = 1; i < openSet.getSize(); ++i) {
+            if (openSet[i]->f < openSet[bestIndex]->f) {
+                bestIndex = i;
+            }
+        }
+
+        Node* current = openSet[bestIndex];
+
+        if (current == tarjet) {
+            return true;  // Ruta encontrada
+        }
+
+        // Remover current del openSet
+        openSet[bestIndex] = openSet[openSet.getSize() - 1];
+        openSet.pop_back();
+
+        current->visited = true;
+
+        for (size_t i = 0; i < current->childrens.getSize(); ++i) {
+            Node* neighbor = current->childrens[i];
+
+            if (neighbor->visited) continue;
+
+            float tentative_g = current->g + heuristica(current, neighbor);  // peso = distancia euclidiana
+
+            if (tentative_g < neighbor->g) {
+                neighbor->parent = current;
+                neighbor->g = tentative_g;
+                neighbor->h = heuristica(neighbor, tarjet);
+                neighbor->f = neighbor->g + neighbor->h;
+
+                // Solo agregar a openSet si no está ya
+                bool enOpenSet = false;
+                for (size_t j = 0; j < openSet.getSize(); ++j)
+                    if (openSet[j] == neighbor) {
+                        enOpenSet = true;
+                        break;
+                    }
+
+                if (!enOpenSet)
+                    openSet.push_back(neighbor);
+            }
+        }
+    }
+
+    return false; // No se encontró camino
 }
